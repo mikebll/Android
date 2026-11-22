@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#10152b" />
+  <title>MINICRAFT · Un mundo en tus manos</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%2310172e'/%3E%3Crect x='6' y='13' width='20' height='13' fill='%23754a2b'/%3E%3Crect x='6' y='11' width='20' height='5' fill='%236bc24a'/%3E%3Crect x='12' y='6' width='8' height='8' fill='%23a7e965'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" aria-label="Mundo de Minicraft"></canvas>
+    <div id="vignette" aria-hidden="true"></div>
+
+    <div id="hud" class="hidden" aria-live="polite">
+      <div class="top-left">
+        <div class="health-panel panel">
+          <div class="panel-label">VIDA</div>
+          <div id="hearts" class="hearts"></div>
+        </div>
+        <div id="quest-panel" class="quest-panel panel">
+          <div class="panel-label"><span>DIARIO</span><span id="quest-count">0/6</span></div>
+          <ul id="quest-list"></ul>
+        </div>
+      </div>
+
+      <div class="top-center">
+        <div class="clock-panel panel">
+          <span id="time-icon" class="time-icon">☀</span>
+          <div>
+            <div id="day-label" class="day-label">DÍA 1</div>
+            <div id="time-label" class="time-label">07:12</div>
+          </div>
+          <div class="clock-divider"></div>
+          <div id="weather-label" class="weather-label">Despejado</div>
+        </div>
+      </div>
+
+      <div class="top-right">
+        <div class="depth-panel panel">
+          <div class="panel-label">PROFUNDIDAD</div>
+          <div id="depth-label">0 m</div>
+        </div>
+        <button id="sound-btn" class="icon-btn panel" aria-label="Silenciar sonido" title="Silenciar (M)">♪</button>
+        <button id="help-btn" class="icon-btn panel" aria-label="Cómo jugar" title="Cómo jugar (H)">?</button>
+      </div>
+
+      <div id="toast" class="toast" role="status"></div>
+
+      <div class="hotbar-wrap">
+        <div id="selected-label" class="selected-label">Antorcha</div>
+        <div id="hotbar" class="hotbar panel"></div>
+        <div class="hint-line"><span class="desktop-hint">CLIC IZQ. minar · CLIC DER. colocar · <b>C</b> fabricar · <b>ESC</b> pausa</span><span class="mobile-hint">Toca el mundo para usar la acción elegida</span></div>
+      </div>
+
+      <div id="craft-btn-wrap" class="craft-btn-wrap">
+        <button id="craft-btn" class="craft-btn panel" aria-label="Abrir fabricación"><span>⚒</span> FABRICAR <kbd>C</kbd></button>
+      </div>
+    </div>
+
+    <div id="touch-controls" class="touch-controls hidden" aria-label="Controles táctiles">
+      <div class="touch-move">
+        <button class="touch-btn" data-move="left" aria-label="Mover a la izquierda">◀</button>
+        <button class="touch-btn" data-move="right" aria-label="Mover a la derecha">▶</button>
+      </div>
+      <div class="touch-actions">
+        <button class="touch-btn mode-btn active" data-mode="mine" aria-label="Modo minar">⛏</button>
+        <button class="touch-btn mode-btn" data-mode="place" aria-label="Modo colocar">▣</button>
+        <button class="touch-btn mode-btn" data-mode="attack" aria-label="Modo atacar">⚔</button>
+        <button class="touch-btn jump-btn" data-move="jump" aria-label="Saltar">▲</button>
+      </div>
+    </div>
+
+    <div id="start-screen" class="screen">
+      <div class="start-glow"></div>
+      <div class="start-content">
+        <div class="eyebrow"><span class="dot"></span> RUST · WEBASSEMBLY · MUNDO INFINITO</div>
+        <h1 class="logo">MINI<span>CRAFT</span></h1>
+        <p class="tagline">Un mundo diminuto. Posibilidades gigantes.</p>
+        <div class="feature-row">
+          <div class="feature"><b>01</b><span>EXPLORA</span><small>Cuevas, bosques y vetas ocultas</small></div>
+          <div class="feature"><b>02</b><span>CONSTRUYE</span><small>Un refugio con tus propias manos</small></div>
+          <div class="feature"><b>03</b><span>SOBREVIVE</span><small>Fabrica, ilumina y aguanta la noche</small></div>
+        </div>
+        <div class="start-actions">
+          <button id="play-btn" class="primary-btn" aria-label="Play"><span class="btn-shine"></span>JUGAR <span class="btn-arrow">▸</span></button>
+          <button id="how-btn" class="secondary-btn" aria-label="Cómo jugar">CÓMO JUGAR</button>
+        </div>
+        <p class="start-note">WASD / flechas para moverte · clic para minar y construir · sin descargas</p>
+      </div>
+      <div class="start-footer">
+        <span>v1.0 · MOTOR PROCEDURAL</span>
+        <span>HECHO PARA JUGAR EN CUALQUIER PANTALLA</span>
+      </div>
+    </div>
+
+    <div id="loading" class="screen">
+      <div class="loading-box">
+        <div class="loading-title">MINICRAFT</div>
+        <div class="loading-bar"><span id="loading-fill"></span></div>
+        <div id="loading-text" class="loading-text">Cargando el mundo…</div>
+      </div>
+    </div>
+
+    <div id="pause-screen" class="screen hidden">
+      <div class="modal-card pause-card">
+        <div class="modal-kicker">EN PAUSA</div>
+        <h2>El mundo espera.</h2>
+        <p>Tómate un respiro. Tu partida sigue aquí.</p>
+        <div class="modal-actions">
+          <button id="resume-btn" class="primary-btn" aria-label="Continuar">CONTINUAR</button>
+          <button id="pause-help-btn" class="secondary-btn">CONTROLES</button>
+          <button id="restart-btn" class="danger-btn">REINICIAR MUNDO</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="death-screen" class="screen hidden">
+      <div class="modal-card death-card">
+        <div class="death-icon">☠</div>
+        <div class="modal-kicker">LA NOCHE PUDO CONTIGO</div>
+        <h2>Has caído.</h2>
+        <p>El mundo conserva todo lo que construiste. Vuelve a intentarlo.</p>
+        <div class="modal-actions">
+          <button id="respawn-btn" class="primary-btn" aria-label="Reaparecer">REAPARECER</button>
+          <button id="death-restart-btn" class="danger-btn">NUEVO MUNDO</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="craft-screen" class="modal-screen hidden">
+      <div class="modal-card craft-card">
+        <div class="modal-head">
+          <div>
+            <div class="modal-kicker">BANCO DE TRABAJO</div>
+            <h2>Fabricación</h2>
+          </div>
+          <button id="craft-close" class="close-btn" aria-label="Cerrar fabricación">✕</button>
+        </div>
+        <div class="craft-help">Haz clic en una receta. Algunas necesitan una <b>mesa de trabajo</b> cerca.</div>
+        <div id="recipe-grid" class="recipe-grid"></div>
+        <div class="modal-foot"><span><kbd>C</kbd> cerrar</span><span id="craft-note">Consigue madera para empezar</span></div>
+      </div>
+    </div>
+
+    <div id="help-screen" class="modal-screen hidden">
+      <div class="modal-card help-card">
+        <div class="modal-head">
+          <div>
+            <div class="modal-kicker">MANUAL DE SUPERVIVENCIA</div>
+            <h2>Cómo jugar</h2>
+          </div>
+          <button id="help-close" class="close-btn" aria-label="Cerrar ayuda">✕</button>
+        </div>
+        <div class="help-grid">
+          <div class="help-item"><span class="keys"><kbd>A</kbd><kbd>D</kbd></span><div><b>Moverse</b><small>Flechas también funcionan. Shift para correr.</small></div></div>
+          <div class="help-item"><span class="keys"><kbd>ESPACIO</kbd></span><div><b>Saltar</b><small>Sube pendientes y explora cuevas.</small></div></div>
+          <div class="help-item"><span class="keys"><kbd>CLIC IZQ.</kbd></span><div><b>Minar</b><small>Mantén pulsado. Necesitas un pico para la piedra.</small></div></div>
+          <div class="help-item"><span class="keys"><kbd>CLIC DER.</kbd></span><div><b>Colocar</b><small>Coloca el bloque o antorcha seleccionado.</small></div></div>
+          <div class="help-item"><span class="keys"><kbd>1</kbd>–<kbd>9</kbd></span><div><b>Inventario</b><small>Rueda del ratón o números para cambiar de objeto.</small></div></div>
+          <div class="help-item"><span class="keys"><kbd>F</kbd></span><div><b>Atacar</b><small>Golpea slimes. La espada hace más daño.</small></div></div>
+          <div class="help-item"><span class="keys"><kbd>C</kbd></span><div><b>Fabricar</b><small>Tablas, palos, mesa, herramientas y antorchas.</small></div></div>
+          <div class="help-item"><span class="keys"><kbd>R</kbd></span><div><b>Usar objeto</b><small>La venda cura 3 corazones.</small></div></div>
+        </div>
+        <div class="help-tip"><b>Primer objetivo:</b> golpea un árbol, fabrica tablas y una mesa de trabajo. Después un pico, y busca carbón para las antorchas.</div>
+        <div class="modal-actions"><button id="help-ok" class="primary-btn">ENTENDIDO</button></div>
+      </div>
+    </div>
+  </div>
+
+  <noscript>Este juego necesita JavaScript y WebAssembly.</noscript>
+  <script src="game.js"></script>
+</body>
+</html>
